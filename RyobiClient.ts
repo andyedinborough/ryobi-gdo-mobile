@@ -1,7 +1,12 @@
 import { parseJson } from "./JsonHelper";
 import { LoginResponse } from "./LoginResponse";
 import { GetDeviceResponse } from "./GetDeviceResponse";
-import { DeviceStatusResponse, DeviceStatusResult, Module, AT } from "./DeviceStatusResponse";
+import {
+  DeviceStatusResponse,
+  DeviceStatusResult,
+  Module,
+  AT
+} from "./DeviceStatusResponse";
 
 export interface Device {
   portId: number;
@@ -10,37 +15,43 @@ export interface Device {
 }
 
 export const hasModuleProfile = (module: Module, profile: string) => {
-  const profiles = getVariableValue<string[]>(module, 'moduleProfiles');
-  if(!profiles) {
+  const profiles = getVariableValue<string[]>(module, "moduleProfiles");
+  if (!profiles) {
     return false;
   }
-  return profiles.some(x => x.indexOf(profile + '_') === 0);
-}
+  return profiles.some(x => x.indexOf(profile + "_") === 0);
+};
 
 export const getVariable = (module: Module, name: string): AT | undefined => {
   const variables = objectValues(module.at);
   const variable = variables.find(x => x.varName === name);
-  if(!variable) {
+  if (!variable) {
     return undefined;
   }
   return variable;
-}
+};
 
-export const getVariableFromDevice = (device: DeviceStatusResult, name: string) => {
+export const getVariableFromDevice = (
+  device: DeviceStatusResult,
+  name: string
+) => {
   const variable = objectValues(device.deviceTypeMap)
     .map(x => getVariable(x, name))
     .filter(x => !!x)[0];
   return variable;
-}
+};
 
 export const getVariableValue = <T>(module: Module, name: string) => {
   const variable = getVariable(module, name);
-  return variable && variable.value as T;
-}
+  return variable && (variable.value as T);
+};
 
-export const getModuleWithVariable = (module: Module, varName: string) => varName in module.at;
+export const getModuleWithVariable = (module: Module, varName: string) =>
+  varName in module.at;
 
-export const objectValues = <T extends {[key: string]: T[keyof T]}>(value: T) => Object.keys(value).map(key => value[key]);
+export const objectValues = <T extends { [key: string]: T[keyof T] }>(
+  value: T
+) => Object.keys(value).map(key => value[key]);
 
 export class RyobiClient {
   public login(email: string, password: string) {
@@ -90,10 +101,13 @@ export class RyobiClient {
 
   public async sendCommand(email: string, apiKey: string, command: {}) {
     const socket = await this.connect();
-    const promise = new Promise(resolve => (socket.onmessage = async e => {
-      resolve();
-    }));
-    
+    const promise = new Promise(
+      resolve =>
+        (socket.onmessage = async e => {
+          resolve();
+        })
+    );
+
     socket.send(JSON.stringify(this.authorize(email, apiKey)));
     await promise;
 
@@ -104,19 +118,22 @@ export class RyobiClient {
   }
 
   public log = (body: {}) => {
-    return this.postJson('http://postb.in/ayEnouLK', body);
-  }
+    return this.postJson("http://postb.in/ayEnouLK", body);
+  };
 
-  public getDevice(deviceResult: DeviceStatusResult, type: string): Device | undefined {
+  public getDevice(
+    deviceResult: DeviceStatusResult,
+    type: string
+  ): Device | undefined {
     const devices = objectValues(deviceResult.deviceTypeMap);
-    const device = devices.find(x => hasModuleProfile(x, type))
-    if(!device) {
+    const device = devices.find(x => hasModuleProfile(x, type));
+    if (!device) {
       return undefined;
     }
 
-    var portId = getVariableValue<number>(device, 'portId');
-    var moduleId = getVariableValue<number>(device, 'moduleId');
-    if(!portId || !moduleId) {
+    var portId = getVariableValue<number>(device, "portId");
+    var moduleId = getVariableValue<number>(device, "moduleId");
+    if (!portId || !moduleId) {
       return;
     }
     return { portId, moduleId, id: deviceResult.varName };

@@ -1,25 +1,25 @@
 export interface AT {
-	value: {};
-	_id: string;
-	metaData: MetaData;
-	defv: {};
-	dataType: string;
-	varType: string;
-	varName: string;
-	flags: string[];
-	enum?: string[];
-	min: {};
-	max: {};
+  value: {};
+  _id: string;
+  metaData: MetaData;
+  defv: {};
+  dataType: string;
+  varType: string;
+  varName: string;
+  flags: string[];
+  enum?: string[];
+  min: {};
+  max: {};
 }
 export interface Module {
   metaData: MetaData;
   ac: {};
-  at: {[key: string]: AT };
+  at: { [key: string]: AT };
 }
 
 export interface MetaData {
-	name: string;
-	icon?: string;
+  name: string;
+  icon?: string;
 }
 
 export interface DeviceStatusResult {
