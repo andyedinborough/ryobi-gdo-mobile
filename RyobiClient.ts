@@ -55,7 +55,7 @@ export const objectValues = <T extends { [key: string]: T[keyof T] }>(
 
 export class RyobiClient {
   public login(email: string, password: string) {
-    return this.postJsonToJson<LoginResponse>(
+    return this.postJsonToJson<LoginResponse | { result: string }>(
       "https://tti.tiwiconnect.com/api/login",
       {
         password,

@@ -8,15 +8,16 @@ import {
 import { GetDeviceResponse, GetDevicesResult } from "./GetDeviceResponse";
 import { LoginResponse } from "./LoginResponse";
 import { DeviceStatusResult } from "./DeviceStatusResponse";
+import { Login } from "./Login";
+import { getStore, Storage, setStore } from "./Storage";
 
 interface AppState {
   devices?: GetDeviceResponse;
   login?: LoginResponse;
+  storage?: Storage;
   statuses?: { [key: string]: DeviceStatusResult };
+  loading?: boolean;
 }
-
-const EMAIL = "";
-const PASSWORD = "";
 
 export default class App extends React.Component<{}, AppState> {
   state: AppState = {};
@@ -31,10 +32,12 @@ export default class App extends React.Component<{}, AppState> {
   }
 
   render() {
-    const { devices } = this.state;
+    const { devices, storage, loading } = this.state;
     return (
       <View style={styles.container}>
-        {!devices && <Text>Loading</Text>}
+        {storage &&
+          !storage.email && <Login onLoggedIn={this.handleLoggedIn} />}
+        {!devices && !storage && <Text>Loading</Text>}
         {devices &&
           devices.result
             .filter(
@@ -45,6 +48,7 @@ export default class App extends React.Component<{}, AppState> {
                 !x.metaData.description.match(/Hub/)
             )
             .map(this.renderDevice)}
+        {loading && <Text style={{ textAlign: "center" }}>Loading... </Text>}
       </View>
     );
   }
@@ -53,10 +57,11 @@ export default class App extends React.Component<{}, AppState> {
     const { statuses } = this.state;
     const status = statuses && statuses[device.varName];
     const doorState = status && getVariableFromDevice(status, "doorState");
+    const lightState = status && getVariableFromDevice(status, "lightState");
     const state =
       doorState && doorState.enum && doorState.enum[doorState.value as number];
     return (
-      <View key={device._id}>
+      <View key={device._id} style={{ marginBottom: 20 }}>
         <Text style={{ textAlign: "center" }}>
           {device.metaData.name.trim()}: {state}
         </Text>
@@ -68,16 +73,24 @@ export default class App extends React.Component<{}, AppState> {
           onPress={() => this.handleClosePress(device.varName)}
           title="Close"
         />
+        <Text style={{ textAlign: "center" }}>
+          Light: {lightState && lightState.value ? "On" : "Off"}
+        </Text>
         <Button
           onPress={() => this.handleLightOnPress(device.varName)}
-          title="Light On"
+          title="On"
         />
         <Button
           onPress={() => this.handleLightOffPress(device.varName)}
-          title="Light Off"
+          title="Off"
         />
       </View>
     );
+  };
+
+  private handleLoggedIn = async (login: LoginResponse) => {
+    const storage = await getStore();
+    this.setState({ login, storage });
   };
 
   private handleOpenPress = (id: string) => {
@@ -101,12 +114,12 @@ export default class App extends React.Component<{}, AppState> {
     cmdName: "light" | "door",
     value: boolean
   ) => {
-    const { login, statuses } = this.state;
+    const { login, statuses, storage } = this.state;
     const statusResult = statuses && statuses[id];
     const device =
       statusResult && ryobiClient.getDevice(statusResult, "garageDoor");
 
-    if (!device || !login) {
+    if (!device || !login || !storage) {
       return;
     }
 
@@ -114,16 +127,36 @@ export default class App extends React.Component<{}, AppState> {
       cmdName === "door"
         ? ryobiClient.door(device, value)
         : ryobiClient.light(device, value);
-    await ryobiClient.sendCommand(EMAIL, login.result.auth.apiKey, cmd);
+    await ryobiClient.sendCommand(storage.email, login.result.auth.apiKey, cmd);
   };
 
   private async load() {
-    const login = await ryobiClient.login(EMAIL, PASSWORD);
+    const storage = await getStore();
+    this.setState({ storage });
+
+    if (!storage.email || !storage.password) {
+      return;
+    }
+
+    const login = (await ryobiClient.login(
+      storage.email,
+      storage.password
+    )) as LoginResponse;
+
+    if (typeof login.result === "string") {
+      alert(login.result);
+      storage.email = "";
+      storage.password = "";
+      await setStore(storage);
+      this.setState({ storage });
+    }
+
     this.setState({ login });
     await this.loadDevices();
   }
 
   private loadDevices = async () => {
+    this.setState({ loading: true });
     const devices = await ryobiClient.getDevices();
     const statusResult = await Promise.all(
       devices.result.map(x => ryobiClient.getStatus(x.varName))
@@ -133,7 +166,7 @@ export default class App extends React.Component<{}, AppState> {
       const result = status.result[0];
       statuses[result.varName] = result;
     }
-    this.setState({ devices, statuses });
+    this.setState({ devices, statuses, loading: false });
     this.tmr = window.setTimeout(this.loadDevices, 3e3);
   };
 }
