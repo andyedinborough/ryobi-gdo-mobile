@@ -4,6 +4,17 @@
     "packagerOpts": {
       "sourceExts": ["ts", "tsx"],
       "transformer": "node_modules/react-native-typescript-transformer/index.js"
+    },
+    "name": "ryobigdo",
+    "displayName": "Ryboi",
+    "icon": "./icon.png",
+    "version": "1.0.0",
+    "slug": "org-edinborough-ryobi",
+    "ios": {
+      "bundleIdentifier": "org.edinborough.ryobi"
+    },
+    "android": {
+      "package": "org.edinborough.ryobi"
     }
   }
 }
