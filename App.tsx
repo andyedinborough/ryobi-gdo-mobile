@@ -19,6 +19,12 @@ interface AppState {
   loading?: boolean;
 }
 
+const VALID_DEVICES = (x: GetDevicesResult) => 
+  x.enabled &&
+  x.activated &&
+  !x.deleted &&
+  !x.metaData.description.match(/Hub/);
+
 export default class App extends React.Component<{}, AppState> {
   state: AppState = {};
   private tmr: number | undefined;
@@ -40,15 +46,9 @@ export default class App extends React.Component<{}, AppState> {
         {!devices && !storage && <Text>Loading</Text>}
         {devices &&
           devices.result
-            .filter(
-              x =>
-                x.enabled &&
-                x.activated &&
-                !x.deleted &&
-                !x.metaData.description.match(/Hub/)
-            )
+            .filter(VALID_DEVICES)
             .map(this.renderDevice)}
-        {loading && <Text style={{ textAlign: "center" }}>Loading... </Text>}
+        {<Text style={{ textAlign: "center" }}>{loading && 'Loading...' || ' '}</Text>}
       </View>
     );
   }
